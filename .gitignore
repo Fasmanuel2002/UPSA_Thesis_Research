@@ -1,0 +1,15 @@
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.webp
+*.h5
+*.json
+*.csv
+*.jsonl
+*.parquet
+*.pyc
+*.pt
+*.txt
