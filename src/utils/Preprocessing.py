@@ -63,8 +63,10 @@ def classify_cancer_type(df_clinical_data : pd.DataFrame) -> list:
 
 
 def elimnation_zeros(df : pd.DataFrame) -> pd.DataFrame:  
+    genes = df.columns[1:]
     
-    zeros_genes = (df.iloc[:, 1:]==0).sum(axis=0)
+    zeros_genes = (df[genes] == 0).sum(axis=0)
+    
     max_number_of_zeros = zeros_genes.max()
     
     avg_number_of_zeros = zeros_genes.mean()
@@ -81,9 +83,12 @@ def elimnation_zeros(df : pd.DataFrame) -> pd.DataFrame:
     
     print(f"Min of zeros per row in the dataset: {min_number_of_zeros}")
     
-    keep_columns = zeros_genes <= avg_number_of_zeros
+    keep_columns = zeros_genes <= avg_number_of_zeros 
     
-    df_return = df.loc[:, keep_columns]
+    df_return = pd.concat(
+        [df[["Tumor-Cancer"]], df.loc[:, genes[keep_columns]]],
+        axis=1
+    )
     
     print(f"After the 0 elimination: {df_return.shape[1]}") 
     
