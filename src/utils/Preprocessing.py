@@ -1,4 +1,6 @@
 import pandas as pd
+from pydeseq2.dds import DeseqDataSet
+from pydeseq2.default_inference import DefaultInference
 
 def classify_cancer_type(df_clinical_data : pd.DataFrame) -> list:
     """
@@ -93,3 +95,21 @@ def elimnation_zeros(df : pd.DataFrame) -> pd.DataFrame:
     print(f"After the 0 elimination: {df_return.shape[1]}") 
     
     return df_return
+
+
+def initialize_DeseqDataSet(counts_data : pd.DataFrame, 
+                     metadata:pd.DataFrame, 
+                     design : str) -> DeseqDataSet:
+    """
+    For initializing the DeseqDataSet variable
+    """
+    inference = DefaultInference(n_cpus=2)
+    
+    deseqDataSet = DeseqDataSet(
+        counts=counts_data,
+        metadata=metadata,
+        design=f'~{design}',
+        inference=inference
+    )
+    
+    return deseqDataSet
