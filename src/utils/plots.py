@@ -82,7 +82,7 @@ def histogram_log2(df: pd.DataFrame, title: str, type_cancer : str) -> None:
     plt.show()
     
 
-def PCA_2_variables(df : pd.DataFrame,  cancer_type_one : str, cancer_type_two : str) -> None:
+def PCA_2_variables_log2(df : pd.DataFrame,  cancer_type_one : str, cancer_type_two : str) -> None:
     """
     Function to make the plot to compare only two type of cancer mamals
     Types:
@@ -98,8 +98,8 @@ def PCA_2_variables(df : pd.DataFrame,  cancer_type_one : str, cancer_type_two :
     X = X.apply(pd.to_numeric, errors="coerce").fillna(0)
 
 
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+    X_log = np.log2(X +1)
+    X_scaled = StandardScaler().fit_transform(X_log)
 
     pca = PCA(n_components=2, random_state=0)
     components = pca.fit_transform(X_scaled)
