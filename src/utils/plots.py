@@ -5,8 +5,10 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 import plotly.express as px
 from sklearn.decomposition import PCA
+from typing import List, Optional
 
-def box_plot(df : pd.DataFrame, title : str, type_cancer : str) -> None:
+
+def box_plot(df : pd.DataFrame, title : str, type_cancer : str ) -> None:
     """
     Function to make box plots
     """
@@ -129,7 +131,7 @@ def PCA_2_variables(df : pd.DataFrame,  cancer_type_one : str, cancer_type_two :
     fig.show()
 
 
-def PCA_2_variables_log2(df : pd.DataFrame,  cancer_type_one : str, cancer_type_two : str) -> None:
+def PCA_variables_log2(df : pd.DataFrame,  cancer_types : List[str]) -> None:
     """
     Function to make the plot to compare only two type of cancer mamals
     Types:
@@ -169,14 +171,70 @@ def PCA_2_variables_log2(df : pd.DataFrame,  cancer_type_one : str, cancer_type_
         color="Tumor-Cancer",
         labels=labels,
         hover_name="Patient_ID",
-        title=f"PCA de Subtypes of cancer of mama with Log2 {cancer_type_one} and {cancer_type_two}",
+        title=f"PCA de Subtypes of cancer of mama with Log2 {cancer_types[0]}, {cancer_types[1]}, {cancer_types[2]},{cancer_types[3]} ",
         opacity=0.7,
-        color_discrete_map={f"{cancer_type_one}": "#1f77b4", f"{cancer_type_two}": "#ec3204"},
+        color_discrete_map={f"{cancer_types[0]}": "#1f77b4",
+                            f"{cancer_types[1]}": "#ec3204",
+                            f"{cancer_types[2]}": "#49fa09",
+                            f"{cancer_types[3]}": "#fa09fa"},
     )
 
     fig.update_traces(marker=dict(size=6))
     fig.show()
 
+
+
+def PCA_4_scatter_matrix_log2(df : pd.DataFrame,  cancer_types : List[str]) -> None:
+    """
+    Function to make the plot to compare only four type of cancer mamals
+    Types:
+        - Luminal A
+        - Luminal B
+        - Triple Negative (TNBC)
+        - HER-enriched 
+    """
+    y = df["Tumor-Cancer"]
+    X = df.drop(columns=["Tumor-Cancer"])
+
+
+    X = X.apply(pd.to_numeric, errors="coerce").fillna(0)
+
+
+    X_log = np.log2(X +1)
+    X_scaled = StandardScaler().fit_transform(X_log)
+
+    pca = PCA(n_components=4, random_state=0)
+    components = pca.fit_transform(X_scaled)
+
+
+    df_plot = pd.DataFrame(components, columns=["PC1", "PC2", "PC3", "PC4"])
+    df_plot["Tumor-Cancer"] = y.values
+    df_plot["Patient_ID"] = df.index
+
+    labels = {
+        "PC1": f"PC1 ({pca.explained_variance_ratio_[0]*100:.1f}%)",
+        "PC2": f"PC2 ({pca.explained_variance_ratio_[1]*100:.1f}%)",
+        "PC3": f"PC3 ({pca.explained_variance_ratio_[2]*100:.1f}%)",
+        "PC4": f"PC4 ({pca.explained_variance_ratio_[3]*100:.1f}%)",
+    }
+
+
+    fig = px.scatter_matrix(
+        df_plot,
+        dimensions=["PC1", "PC2", "PC3", "PC4"],
+        color="Tumor-Cancer",
+        labels=labels,
+        hover_name="Patient_ID",
+        title=f"PCA de Subtypes of cancer of mama with Log2 {cancer_types[0]}, {cancer_types[1]}, {cancer_types[2]}, {cancer_types[3]}",
+        opacity=0.7,
+        color_discrete_map={f"{cancer_types[0]}": "#1f77b4",
+                            f"{cancer_types[1]}": "#ec3204",
+                            f"{cancer_types[2]}": "#49fa09",
+                            f"{cancer_types[3]}": "#fa09fa"},
+    )
+
+    fig.update_traces(marker=dict(size=6))
+    fig.show()
 
 
     
