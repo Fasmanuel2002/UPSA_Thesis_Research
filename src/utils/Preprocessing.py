@@ -113,3 +113,22 @@ def initialize_DeseqDataSet(counts_data : pd.DataFrame,
     )
     
     return deseqDataSet
+
+
+def total_type_len_type_cancer(df: pd.DataFrame) -> list:
+    
+    list_df = classify_cancer_type(df_clinical_data=df)
+
+    luminal_A = [x for x in list_df if x == "Luminal A"]
+    luminal_B = [x for x in list_df if x == "Luminal B"]
+    HER2_enriched = [x for x in list_df if x == "HER2-enriched"]
+    TNBC = [x for x in list_df if x == "TNBC"]
+    UNK = [x for x in list_df if x == "<UNK>"]
+
+    print(f"Luminal A: {len(luminal_A)} - Total(%): {len(luminal_A) / len(df):.2f}")
+    print(f"Luminal B: {len(luminal_B)} - Total(%):{len(luminal_B) / len(df):.2f}")
+    print(f"HER2-enriched: {len(HER2_enriched)} - Total(%):{len(HER2_enriched) / len(df):.2f}")
+    print(f"TNBC: {len(TNBC)} - Total(%){len(TNBC) / len(df):.2f} ")
+    print(f"UNK: {len(UNK)} - Total(%) {len(UNK) / len(df):.2f}")
+
+    return list_df
