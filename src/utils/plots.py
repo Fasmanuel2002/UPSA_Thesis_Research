@@ -5,53 +5,45 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 import plotly.express as px
 from sklearn.decomposition import PCA
-from typing import List, Optional
+from typing import List, Optional, Any
 
 
-def box_plot(df : pd.DataFrame, title : str, type_cancer : str ) -> None:
+def box_plot(data : Any, title : str, type_cancer : Optional[str],
+             range_min : int, range_max : int ) -> None:
     """
     Function to make box plots
     """
-    try:
-        if type_cancer == "Luminal A":
-            df = df[df["Tumor-Cancer"] == "Luminal A"].iloc[:, 1:]
-            
-        elif type_cancer == "Luminal B":
-            df = df[df["Tumor-Cancer"] == "Luminal B"].iloc[:, 1:]
-            
-        elif type_cancer == "TNBC":
-            df = df[df["Tumor-Cancer"] == "TNBC"].iloc[:, 1:]
-            
-        elif type_cancer == "HER2-enriched":
-            df = df[df["Tumor-Cancer"] == "HER2-enriched"].iloc[:, 1:]
-    except TypeError:
-        print(f"Error, you need to put the values of type cancer like this Luminal A, Luminal B, TNBC and HER2-enriched")
-    
+    if isinstance(data, pd.DataFrame):
+        if type_cancer is not None:
+            valid_types_cancer = ["Luminal A", "Luminal B", "TNBC", "HER2-enriched"]
+            if type_cancer not in valid_types_cancer:
+                raise ValueError(f"Error in the valid types, needs to be {valid_types_cancer}")
+        
+        data = data[data["Tumor-Cancer"] == type_cancer].iloc[: ,1:] 
+        data = np.log2(data[range_min:range_max].T + 1)
+        
+    elif isinstance(data, np.ndarray):
+        data = data[range_min:range_max].T 
     
     plt.figure(figsize=(12,5))
-    plt.boxplot(np.log2(df[1:21].T + 1))  # transpose
+    plt.boxplot(data)  # transpose
     plt.title(title, fontsize=14)
     plt.xticks(rotation=90)
+    plt.tight_layout()
     plt.show()
+
+
     
 
 def histogram_log2(df: pd.DataFrame, title: str, type_cancer : str) -> None:
-    try:
-        if type_cancer == "Luminal A":
-            df = df[df["Tumor-Cancer"] == "Luminal A"].iloc[:, 1:]
-            
-        elif type_cancer == "Luminal B":
-            df = df[df["Tumor-Cancer"] == "Luminal B"].iloc[:, 1:]
-            
-        elif type_cancer == "TNBC":
-            df = df[df["Tumor-Cancer"] == "TNBC"].iloc[:, 1:]
-            
-        elif type_cancer == "HER2-enriched":
-            df = df[df["Tumor-Cancer"] == "HER2-enriched"].iloc[:, 1:]
-    except ValueError:
-        print(f"Error, you need to put the values of type cancer like this Luminal A, Luminal B, TNBC and HER2-enriched")
-        
-        
+    
+    if type_cancer is not None:
+            valid_types_cancer = ["Luminal A", "Luminal B", "TNBC", "HER2-enriched"]
+            if type_cancer not in valid_types_cancer:
+                raise ValueError(f"Error in the valid types, needs to be {valid_types_cancer}")
+    
+    df = df[df["Tumor-Cancer"] == type_cancer].iloc[: 1:]
+    
     x = np.log2(df.iloc[1:20000].T.values.flatten() + 1)
     counts, bins = np.histogram(x, bins=100)
     counts_percentage = (counts / counts.sum()) * 100
