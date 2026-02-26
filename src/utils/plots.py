@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from scipy.stats import norm
 import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 import plotly.express as px
 from sklearn.decomposition import PCA
@@ -9,7 +10,7 @@ from typing import List, Optional, Any
 
 
 def box_plot(data : Any, title : str, type_cancer : Optional[str],
-             range_min : int, range_max : int ) -> None:
+             range_min : int = 1, range_max : int = 21 ) -> None:
     """
     Function to make box plots
     """
@@ -33,7 +34,26 @@ def box_plot(data : Any, title : str, type_cancer : Optional[str],
     plt.show()
 
 
+def density_plot(data : Any, title: str , type_cancer :
+    Optional[str], range_min : int = 1, range_max : int = 21) -> None:
     
+    if isinstance(data, pd.DataFrame):
+        if type_cancer is not None:
+            valid_types_cancer = ["Luminal A", "Luminal B", "TNBC", "HER2-enriched"]
+            if type_cancer not in valid_types_cancer:
+                raise ValueError(f"Error in the valid types, needs to be {valid_types_cancer}")
+    
+        data = data[data["Tumor-Cancer"] == type_cancer].iloc[: ,1:] 
+        data = np.log2(data[range_min:range_max].T + 1)
+    
+    elif isinstance(data, np.ndarray):
+        data = data[range_min:range_max].T 
+    
+    
+    sns.kdeplot(data, alpha=0.5)
+    plt.legend().remove()
+    plt.title(title)
+    plt.show()
 
 def histogram_log2(df: pd.DataFrame, title: str, type_cancer : str) -> None:
     
