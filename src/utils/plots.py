@@ -62,7 +62,7 @@ def histogram_log2(df: pd.DataFrame, title: str, type_cancer : str) -> None:
             if type_cancer not in valid_types_cancer:
                 raise ValueError(f"Error in the valid types, needs to be {valid_types_cancer}")
     
-    df = df[df["Tumor-Cancer"] == type_cancer].iloc[: 1:]
+    df = df[df["Tumor-Cancer"] == type_cancer].iloc[: ,1:]
     
     x = np.log2(df.iloc[1:20000].T.values.flatten() + 1)
     counts, bins = np.histogram(x, bins=100)
