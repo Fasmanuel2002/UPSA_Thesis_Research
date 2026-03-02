@@ -72,7 +72,7 @@ class Preprocessor:
 
 
 
-    def elimnation_zeros(self, df : pd.DataFrame) -> pd.DataFrame:  
+    def elimnation_zeros(self, df : pd.DataFrame, column : str) -> pd.DataFrame:  
         genes = df.columns[1:]
         
         zeros_genes = (df[genes] == 0).sum(axis=0)
@@ -96,7 +96,7 @@ class Preprocessor:
         keep_columns = zeros_genes <= avg_number_of_zeros 
         
         df_return = pd.concat(
-            [df[["Tumor-Cancer"]], df.loc[:, genes[keep_columns]]],
+            [df[column], df.loc[:, genes[keep_columns]]],
             axis=1
         )
         
@@ -157,13 +157,13 @@ class Preprocessor:
         
         
     
-    def initialize_limma(self, df : pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    def initialize_limma(self, df : pd.DataFrame, column : str) -> Tuple[pd.DataFrame, pd.DataFrame, np.ndarray]:
         
-        metadata = pd.DataFrame(df["Tumor-Cancer"], index=df.index)
+        metadata = pd.DataFrame(df[column], index=df.index)
         
-        metadata.columns = ["Tumor_Cancer"]
+        metadata.columns = [column]
         
-        number_data = df.drop(columns=["Tumor-Cancer"])
+        number_data = df.drop(columns=[column])
         
         number_data = np.log2(number_data + 1)
         
@@ -173,7 +173,7 @@ class Preprocessor:
         
         metadata_aligned = metadata.loc[expr.columns].copy() # type: ignore
         
-        design = pd.get_dummies(metadata_aligned["Tumor_Cancer"]).astype(float)
+        design = pd.get_dummies(metadata_aligned[column]).astype(float)
         
         #This is for fitting the models
         limma_fit_models = limma.lmFit(obj=expr, design=design)
@@ -186,11 +186,13 @@ class Preprocessor:
         
         #Transform to pandas dataframe
         results_df = pd.DataFrame(results)
-
-        return (results_df.rename(columns={
+        if column == "Tumor-Cancer":
+            results_df = results_df.rename(columns={
                                 "column0":"HER2-enriched",
                                 "column1":"Luminal A",
                                 "column2":"Luminal B",
                                 "column3":"TNBC"                                
-                                }), design)
+                                })
+            
+        return (results_df, design, expr)
 
