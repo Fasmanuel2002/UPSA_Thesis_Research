@@ -1,14 +1,15 @@
 import pandas as pd
 from pydeseq2.dds import DeseqDataSet
 from pydeseq2.default_inference import DefaultInference
-
-
+from inmoose import limma
+import numpy as np
+from typing import Tuple
 
 class Preprocessor:
     def __init__(self) -> None:
         pass
 
-
+    
     def classify_cancer_type(self, df_clinical_data : pd.DataFrame) -> list:
         """
         Function to classify between the different type of Cancers,
@@ -139,3 +140,57 @@ class Preprocessor:
         print(f"UNK: {len(UNK)} - Total(%) {len(UNK) / len(df):.2f}")
 
         return list_df
+
+    
+    def merge_datasets(self, df_clinical_data : pd.DataFrame ,
+                       df_mRNA : pd.DataFrame) -> pd.DataFrame:
+        
+        df_mRNA = df_mRNA.drop(columns=["Hugo_Symbol", "Entrez_Gene_Id"], axis=0)
+        
+        df_mRNA = df_mRNA.T.reset_index()
+        
+        df_mRNA = df_mRNA.rename(columns={"index":"Sample ID"})
+        
+        df_merged = pd.merge(df_mRNA, df_clinical_data, right_on="Sample ID", left_on="Sample ID")
+        
+        return df_merged
+        
+        
+    
+    def initialize_limma(self, df : pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        
+        metadata = pd.DataFrame(df["Tumor-Cancer"], index=df.index)
+        
+        metadata.columns = ["Tumor_Cancer"]
+        
+        number_data = df.drop(columns=["Tumor-Cancer"])
+        
+        number_data = np.log2(number_data + 1)
+        
+        expr = number_data.T  #(Samples, Genes)
+        
+        assert (expr.columns == metadata.index).all() # type: ignore
+        
+        metadata_aligned = metadata.loc[expr.columns].copy() # type: ignore
+        
+        design = pd.get_dummies(metadata_aligned["Tumor_Cancer"]).astype(float)
+        
+        #This is for fitting the models
+        limma_fit_models = limma.lmFit(obj=expr, design=design)
+
+        #Emperical moderate Bayes (eBayes)
+        limma_fit_models = limma.eBayes(limma_fit_models)
+
+        #Obtain the table of Results
+        results = limma.topTable(limma_fit_models, number=np.inf) # type: ignore
+        
+        #Transform to pandas dataframe
+        results_df = pd.DataFrame(results)
+
+        return (results_df.rename(columns={
+                                "column0":"HER2-enriched",
+                                "column1":"Luminal A",
+                                "column2":"Luminal B",
+                                "column3":"TNBC"                                
+                                }), design)
+
