@@ -5,6 +5,21 @@ from inmoose import limma
 import numpy as np
 from typing import Tuple
 
+
+KEEP_COLUMNS = [   
+    "Sample ID", "Patient ID",
+    "Overall Survival (Months)", "Overall Survival Status",
+    "Diagnosis Age",
+    "Neoplasm Disease Stage American Joint Committee on Cancer Code",
+    "Lymph Node(s) Examined Number",
+    "Menopause Status",
+    "ER Status By IHC",
+    "PR status by ihc",
+    "HER2 fish status",
+    "HER2 ihc score",
+]
+
+
 class Preprocessor:
     def __init__(self) -> None:
         pass
@@ -103,6 +118,12 @@ class Preprocessor:
         print(f"After the 0 elimination: {df_return.shape[1]}") 
         
         return df_return
+    
+    def clean_columns_dataset(self, df : pd.DataFrame) -> pd.DataFrame:
+        """
+        Function for cleaning columns that doesn't value for the clinical dataset
+        """
+        return df[[column for column in KEEP_COLUMNS if column in df.columns]].copy()
 
 
     def initialize_DeseqDataSet(self, counts_data : pd.DataFrame, 
