@@ -7,7 +7,9 @@ from sklearn.preprocessing import StandardScaler
 import plotly.express as px
 from sklearn.decomposition import PCA
 from typing import List, Optional, Any
-
+from sksurv.nonparametric import kaplan_meier_estimator
+from sksurv.util import Surv
+from sksurv.compare import compare_survival
 
 class Plots:
     def __init__(self) -> None:
@@ -252,5 +254,42 @@ class Plots:
         fig.show()
 
 
+    def plot_kaplan_meier_binary(self, df: pd.DataFrame, time_col : str , status_col : str , marker_col : str):
+    
+        df[time_col] = pd.to_numeric(df[time_col])
+
+        status = df[status_col].astype(str).str.strip()
         
+        df["event"] = status.str.contains("DECEASED", na=False)
+
+        
+        m = df[marker_col].astype(str).str.strip()
+        
+        is_pos = m.str.contains("Positive")
+        is_neg = m.str.contains("Negative")
+
+        df = df.loc[(is_pos | is_neg)].copy()
+        df["group"] = np.where(is_pos.loc[df.index], "ER+", "ER-")
+
+        
+        plt.figure()
+        for g in ["ER+", "ER-"]:
+            sub = df[df["group"] == g]
+            event = sub["event"].to_numpy(dtype=bool)
+            time = sub[time_col].to_numpy(dtype=float)
+
+            time, prob_survival = kaplan_meier_estimator(event, time)  # type: ignore # event True=evento, False=censura
+            plt.step(time, prob_survival, where="post", label=f"{g} (n={len(sub)})")
+
+        plt.xlabel("Months")
+        plt.ylabel("Survival probability")
+        plt.title(f"Kaplan–Meier por {marker_col}")
+        plt.legend()
+        plt.show()
+
+        y = Surv.from_arrays(df["event"].to_numpy(bool), df[time_col].to_numpy(float))
+        chisq, pvalue = compare_survival(y, df["group"].to_numpy()) # type: ignore
+        print(f"Log-rank: chi2={chisq:.3f}, p={pvalue:.4g}")
+
+        return df 
         
