@@ -217,3 +217,21 @@ class Preprocessor:
             
         return (results_df, design, expr)
     
+    
+    def gene_to_long(self, df_mrna: pd.DataFrame, gene: str) -> pd.DataFrame:
+        row = df_mrna.loc[df_mrna["Hugo_Symbol"].eq(gene)]
+        if row.empty:
+            raise ValueError(f"No existe {gene} en df_mrna")
+
+        sample_cols = [c for c in df_mrna.columns if c not in ["Hugo_Symbol", "Entrez_Gene_Id"]]
+        row = row[["Hugo_Symbol"] + sample_cols].iloc[0]
+
+        out = (
+            row.drop(labels=["Hugo_Symbol"])
+            .rename("expression")
+            .to_frame()
+            .reset_index()
+            .rename(columns={"index": "Sample ID"})
+        )
+        out["Hugo_Symbol"] = gene
+        return out
