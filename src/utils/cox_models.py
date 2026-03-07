@@ -8,7 +8,10 @@ import matplotlib.pyplot as plt
 def Cox_regression(X_train : pd.DataFrame,
                    Y_train : pd.DataFrame,
                    X_test : pd.DataFrame, 
-                   ) -> Tuple[pd.DataFrame, np.ndarray]:
+                   ) -> Tuple[pd.DataFrame,
+                              np.ndarray,
+                              np.ndarray,
+                              np.ndarray]:
     
     alphas = 10.0 ** np.linspace(-4,4, 50)
     
@@ -27,8 +30,9 @@ def Cox_regression(X_train : pd.DataFrame,
              .set_index(X_train.columns))
     
     chp_predict = chp.predict(X_test)
-    
-    return (betas, chp_predict)
+    chp_survival_curve = chp.predict_survival_function(X_test)
+    chp_risk_curve = chp.predict_cumulative_hazard_function(X_test)
+    return (betas, chp_predict, chp_survival_curve, chp_risk_curve)
 
         
 def p_values_Cox_regression(df: pd.DataFrame, 
