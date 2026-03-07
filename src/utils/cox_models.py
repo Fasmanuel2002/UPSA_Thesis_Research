@@ -2,13 +2,13 @@ from lifelines import CoxPHFitter
 from sksurv.linear_model import CoxPHSurvivalAnalysis
 import pandas as pd
 import numpy as np
-from typing import Tuple
+from typing import Tuple, Any
 import matplotlib.pyplot as plt
 
 def Cox_regression(X_train : pd.DataFrame,
                    Y_train : pd.DataFrame,
                    X_test : pd.DataFrame, 
-                   Y_test : pd.DataFrame) -> Tuple[pd.DataFrame, CoxPHSurvivalAnalysis]:
+                   ) -> Tuple[pd.DataFrame, np.ndarray]:
     
     alphas = 10.0 ** np.linspace(-4,4, 50)
     
@@ -22,18 +22,23 @@ def Cox_regression(X_train : pd.DataFrame,
         key = round(alpha, 5)
         betas[key] = chp.coef_
     
-    betas = pd.DataFrame.from_dict(betas).rename_axis(index="feature", columns="alpha").set_index(X_train.columns)
+    betas = (pd.DataFrame.from_dict(betas)
+             .rename_axis(index="feature", columns="alpha")
+             .set_index(X_train.columns))
     
     chp_predict = chp.predict(X_test)
     
     return (betas, chp_predict)
 
         
-def p_values_Cox_regression(df: pd.DataFrame, event_col : str, duration_col : str) -> None:
+def p_values_Cox_regression(df: pd.DataFrame, 
+                            event_col : str, 
+                            duration_col : str) -> pd.DataFrame:
     pvalue_Cox = CoxPHFitter()
     pvalue_Cox.fit(df, event_col=event_col, duration_col=duration_col)
-    pvalue_Cox.print_summary()
-    pvalue_Cox.predict_median(df)
+    
+    return pvalue_Cox.summary
+    
     
     
 def plot_coefficients(coefs, n_highlight, title:str):
