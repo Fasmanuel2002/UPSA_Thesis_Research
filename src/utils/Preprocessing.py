@@ -4,7 +4,7 @@ from pydeseq2.default_inference import DefaultInference
 from inmoose import limma
 import numpy as np
 from typing import Tuple
-
+from sksurv.util import Surv
 
 KEEP_COLUMNS = [   
     "Sample ID", "Patient ID",
@@ -87,61 +87,27 @@ class Preprocessor:
 
 
 
-    def elimnation_zeros(self, df : pd.DataFrame, column : str) -> pd.DataFrame:  
-        genes = df.columns[1:]
-        
-        zeros_genes = (df[genes] == 0).sum(axis=0)
-        
-        max_number_of_zeros = zeros_genes.max()
-        
-        avg_number_of_zeros = zeros_genes.mean()
-        
-        median_number_of_zeros = zeros_genes.median()
-        
-        min_number_of_zeros = zeros_genes.min()
-        
-        print(f"Max of zeros per row in the dataset: {max_number_of_zeros}")
-        
-        print(f"Avg of zeros per row in the dataset: {avg_number_of_zeros}")
-        
-        print(f"Median of zeros per row in the dataset: {median_number_of_zeros}")
-        
-        print(f"Min of zeros per row in the dataset: {min_number_of_zeros}")
-        
-        keep_columns = zeros_genes <= avg_number_of_zeros 
-        
-        df_return = pd.concat(
-            [df[column], df.loc[:, genes[keep_columns]]],
-            axis=1
-        )
-        
-        print(f"After the 0 elimination: {df_return.shape[1]}") 
-        
-        return df_return
+    def eliminate_zero_genes(self, df: pd.DataFrame, gene_col: str):
+        non_expr_cols = [c for c in [gene_col, "Entrez_Gene_Id"] if c in df.columns]
+
+        expression = df.drop(columns=non_expr_cols).apply(pd.to_numeric, errors="coerce")
+
+        zeros_per_gene = (expression == 0).sum(axis=1)
+
+        keep_genes = zeros_per_gene < expression.shape[1] * 0.8
+
+        df_filtered = df.loc[keep_genes].copy()
+
+        print("Genes before:", df.shape[0])
+        print("Genes after:", df_filtered.shape[0])
+
+        return df_filtered
     
     def clean_columns_dataset(self, df : pd.DataFrame) -> pd.DataFrame:
         """
         Function for cleaning columns that doesn't value for the clinical dataset
         """
         return df[[column for column in KEEP_COLUMNS if column in df.columns]].copy()
-
-
-    def initialize_DeseqDataSet(self, counts_data : pd.DataFrame, 
-                        metadata:pd.DataFrame, 
-                        design : str) -> DeseqDataSet:
-        """
-        For initializing the DeseqDataSet variable
-        """
-        inference = DefaultInference(n_cpus=2)
-        
-        deseqDataSet = DeseqDataSet(
-            counts=counts_data,
-            metadata=metadata,
-            design=f'~{design}',
-            inference=inference
-        )
-        
-        return deseqDataSet
 
 
     def total_type_len_type_cancer(self, df: pd.DataFrame) -> list:
@@ -235,3 +201,48 @@ class Preprocessor:
         )
         out["Hugo_Symbol"] = gene
         return out
+    
+    def split_data_set(self , df_mRNA : pd.DataFrame, 
+                       df_clinical : pd.DataFrame,
+                       gene : str) -> Tuple:
+    
+        df_single_gene  = self.gene_to_long(df_mRNA, gene)
+        df_gene_merged = df_single_gene.merge(df_clinical, on="Sample ID", how="inner")
+        
+        status = df_gene_merged["Overall Survival Status"].astype(str).str.strip()
+        
+        df_gene_merged["event"] = status.str.contains("DECEASED", na=False) 
+    
+        df_gene_merged = df_gene_merged.dropna(subset=["Overall Survival (Months)"])
+        
+        df_gene_merged["expression"] = (df_gene_merged["expression"]
+                                        .apply(lambda single_expression : np.log2(single_expression)))
+
+        X = df_gene_merged[["expression"]]
+        
+        Y_surv = Surv.from_dataframe(
+        event="event",
+        time="Overall Survival (Months)",
+        data=df_gene_merged
+        )
+        
+        return X, Y_surv, df_gene_merged
+"""
+        
+def initialize_DeseqDataSet(self, counts_data : pd.DataFrame, 
+                        metadata:pd.DataFrame, 
+                        design : str) -> DeseqDataSet:
+        
+        For initializing the DeseqDataSet variable
+        
+        inference = DefaultInference(n_cpus=2)
+        
+        deseqDataSet = DeseqDataSet(
+            counts=counts_data,
+            metadata=metadata,
+            design=f'~{design}',
+            inference=inference
+        )
+        
+        return deseqDataSet
+"""
