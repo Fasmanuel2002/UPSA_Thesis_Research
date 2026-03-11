@@ -89,15 +89,35 @@ class Preprocessor:
 
     def eliminate_zero_genes(self, df: pd.DataFrame, gene_col: str):
         non_expr_cols = [c for c in [gene_col, "Entrez_Gene_Id"] if c in df.columns]
-
         expression = df.drop(columns=non_expr_cols).apply(pd.to_numeric, errors="coerce")
 
         zeros_per_gene = (expression == 0).sum(axis=1)
 
-        keep_genes = zeros_per_gene < expression.shape[1] * 0.8
+        print(zeros_per_gene.describe())
+        print("Max zeros in a gene:", zeros_per_gene.max())
+        print("Min zeros in a gene:", zeros_per_gene.min())
+
+        threshold = expression.shape[1] * 0.8
+        print("Threshold:", threshold)
+
+        keep_genes = zeros_per_gene < threshold
+        df_filtered = df.loc[keep_genes].copy()
+
+        print("Genes before:", df.shape[0])
+        print("Genes after:", df_filtered.shape[0])
+
+        return df_filtered
+    
+    def eliminate_nan_genes(self, df: pd.DataFrame, gene_col: str) -> pd.DataFrame:
+        non_expr_cols = [c for c in [gene_col, "Entrez_Gene_Id"] if c in df.columns]
+        expression = df.drop(columns=non_expr_cols).apply(pd.to_numeric, errors="coerce")
+
+        nan_per_gene = expression.isna().sum(axis=1)
+        keep_genes = nan_per_gene < expression.shape[1] * 0.8
 
         df_filtered = df.loc[keep_genes].copy()
 
+        print("Max NaN per gene:", nan_per_gene.max())
         print("Genes before:", df.shape[0])
         print("Genes after:", df_filtered.shape[0])
 
