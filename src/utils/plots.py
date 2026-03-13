@@ -11,10 +11,12 @@ from sksurv.nonparametric import kaplan_meier_estimator
 from sksurv.util import Surv
 from sksurv.compare import compare_survival
 
+from src.utils.Preprocessing import Preprocessor
 class Plots:
     def __init__(self) -> None:
-        pass
-    def box_plot(self, data : Any, title : str, type_cancer : Optional[str],
+        self.pp = Preprocessor()
+        
+    def box_plot(self, data : Any, title : str, type_cancer : Optional[str] = None,
                 range_min : int = 1, range_max : int = 21 ) -> None:
         """
         Function to make box plots
@@ -40,7 +42,7 @@ class Plots:
 
 
     def density_plot(self, data : Any, title: str , type_cancer :
-        Optional[str], range_min : int = 1, range_max : int = 21) -> None:
+        Optional[str] = None, range_min : int = 1, range_max : int = 21) -> None:
         
         if isinstance(data, pd.DataFrame):
             if type_cancer is not None:
@@ -253,43 +255,82 @@ class Plots:
         fig.update_traces(marker=dict(size=6))
         fig.show()
 
-
-    def plot_kaplan_meier_binary(self, df: pd.DataFrame, time_col : str , status_col : str , marker_col : str):
-    
+        
+    def plot_kaplan_meier(self, 
+                          df_mrna: pd.DataFrame,
+                          df_clin : pd.DataFrame,
+                          time_col : str , 
+                          status_col : str ,
+                          gene : str,
+                          form : str,
+                          marker_col : Optional[str] = None):
+        
+        df = self.pp.gene_to_long(df_mrna, gene)
+        
+        df = df.merge(df_clin, on="Sample ID", how="inner")
+        
         df[time_col] = pd.to_numeric(df[time_col])
 
         status = df[status_col].astype(str).str.strip()
         
         df["event"] = status.str.contains("DECEASED", na=False)
 
-        
-        m = df[marker_col].astype(str).str.strip()
-        
-        is_pos = m.str.contains("Positive")
-        is_neg = m.str.contains("Negative")
+        if form == "binary":
+            m = df[marker_col].astype(str).str.strip()
+            is_pos = m.str.contains("Positive")
+            is_neg = m.str.contains("Negative")
 
-        df = df.loc[(is_pos | is_neg)].copy()
-        df["group"] = np.where(is_pos.loc[df.index], "ER+", "ER-")
+            df = df.loc[(is_pos | is_neg)].copy()
+            df["group"] = np.where(is_pos.loc[df.index], "ER+", "ER-")
+            groups = ["ER+", "ER-"]
+        
+        elif form == "median":
+            df["expression"] = pd.to_numeric(df["expression"], errors="coerce")
+            df = df.dropna(subset=["expression", time_col, "event"])
+
+            thr = float(df["expression"].median())
+            df["group"] = np.where(df["expression"] < thr, f"{gene}-", f"{gene}+")
+            print("threshold =", thr)
+            
+            groups = [f"{gene}+", f"{gene}-"]
 
         
         plt.figure()
-        for g in ["ER+", "ER-"]:
+        for g in groups:
             sub = df[df["group"] == g]
             event = sub["event"].to_numpy(dtype=bool)
             time = sub[time_col].to_numpy(dtype=float)
-
-            time, prob_survival = kaplan_meier_estimator(event, time)  # type: ignore # event True=evento, False=censura
+            
+            event_60_month = event.copy()
+            event_60_month[time > 60] = False
+            time_60_months = np.minimum(time, 60)
+            time, prob_survival = kaplan_meier_estimator(event_60_month, time_60_months)  # type: ignore # event True=evento, False=censura
             plt.step(time, prob_survival, where="post", label=f"{g} (n={len(sub)})")
 
-        plt.xlabel("Months")
-        plt.ylabel("Survival probability")
-        plt.title(f"Kaplan–Meier por {marker_col}")
-        plt.legend()
-        plt.show()
+        if form == "binary":
+            plt.xlabel("Months")
+            plt.ylabel("Survival probability")
+            plt.title(f"Kaplan–Meier por {marker_col}")
+            plt.legend()
+            plt.show()
 
-        y = Surv.from_arrays(df["event"].to_numpy(bool), df[time_col].to_numpy(float))
-        chisq, pvalue = compare_survival(y, df["group"].to_numpy()) # type: ignore
+        elif form == "median":
+            plt.xlabel("Months")
+            plt.ylabel("Survival probability")
+            plt.title(f"Kaplan–Meier por {gene} (mediana)")
+            plt.legend()
+            plt.show()
+
+        
+        time_all = df[time_col].to_numpy(dtype=float)
+        event_all = df["event"].to_numpy(dtype=bool)
+
+        event_60_months = event_all.copy()
+        event_60_months[time_all > 60] = False
+        time_60_months = np.minimum(time_all, 60)
+
+        y = Surv.from_arrays(event_60_months, time_60_months)
+        chisq, pvalue = compare_survival(y, df["group"].to_numpy())
         print(f"Log-rank: chi2={chisq:.3f}, p={pvalue:.4g}")
 
         return df 
-        
