@@ -304,13 +304,23 @@ class Plots:
             sub = df[df["group"] == g]
             event = sub["event"].to_numpy(dtype=bool)
             time = sub[time_col].to_numpy(dtype=float)
-    
+            
+            time_points_months = np.array([0, 12, 24, 36, 48, 60])
+            at_risk = [(time > tp).sum() for tp in time_points_months]
+            print(f"\nFor this group the risk {g}\n")
+            x = [(time, risk) for time,risk in zip(time_points_months, at_risk)]
+            for i, _ in enumerate(x):
+                print(f"For the time {x[i][0]} the risk group is {x[i][1]}")
+                
             event_60_month = event.copy()
             event_60_month[time > 60] = False
             time_60_months = np.minimum(time, 60)
             time, prob_survival, conf_int = kaplan_meier_estimator(event_60_month, time_60_months, conf_type="log-log")  # type: ignore # event True=evento, False=censura
             plt.step(time, prob_survival, where="post", label=f"{g} (n={len(sub)})")
             plt.fill_between(time, conf_int[0], conf_int[1], alpha=0.25, step="post")
+            
+           
+            
            
 
         if form == "binary":
@@ -335,6 +345,8 @@ class Plots:
         event_60_months[time_all > 60] = False
         time_60_months = np.minimum(time_all, 60)
 
+        
+        
         y = Surv.from_arrays(event_60_months, time_60_months)
         chisq, pvalue = compare_survival(y, df["group"].to_numpy())
         print(f"Log-rank: chi2={chisq:.3f}, p={pvalue:.4g}")
