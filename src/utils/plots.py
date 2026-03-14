@@ -10,6 +10,10 @@ from typing import List, Optional, Any
 from sksurv.nonparametric import kaplan_meier_estimator
 from sksurv.util import Surv
 from sksurv.compare import compare_survival
+from lifelines import KaplanMeierFitter
+from lifelines.plotting import add_at_risk_counts
+import matplotlib.pyplot as plt
+import numpy as np
 
 from src.utils.Preprocessing import Preprocessor
 class Plots:
@@ -300,12 +304,14 @@ class Plots:
             sub = df[df["group"] == g]
             event = sub["event"].to_numpy(dtype=bool)
             time = sub[time_col].to_numpy(dtype=float)
-            
+    
             event_60_month = event.copy()
             event_60_month[time > 60] = False
             time_60_months = np.minimum(time, 60)
-            time, prob_survival = kaplan_meier_estimator(event_60_month, time_60_months)  # type: ignore # event True=evento, False=censura
+            time, prob_survival, conf_int = kaplan_meier_estimator(event_60_month, time_60_months, conf_type="log-log")  # type: ignore # event True=evento, False=censura
             plt.step(time, prob_survival, where="post", label=f"{g} (n={len(sub)})")
+            plt.fill_between(time, conf_int[0], conf_int[1], alpha=0.25, step="post")
+           
 
         if form == "binary":
             plt.xlabel("Months")
