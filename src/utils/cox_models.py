@@ -2,13 +2,14 @@ from lifelines import CoxPHFitter
 from sksurv.linear_model import CoxPHSurvivalAnalysis
 import pandas as pd
 import numpy as np
-from typing import Tuple, Any
+from typing import Tuple, Any, Optional
 import matplotlib.pyplot as plt
 
 def Cox_regression(X_train : pd.DataFrame,
                    Y_train : pd.DataFrame,
                    X_test : pd.DataFrame,
-                   title: str
+                   draw_plot : bool,
+                   title: Optional[str] = None,
                    ) -> Tuple[pd.DataFrame,
                               np.ndarray,
                               np.ndarray,
@@ -31,24 +32,27 @@ def Cox_regression(X_train : pd.DataFrame,
              .set_index(X_train.columns))
     
     chp_predict = chp.predict(X_test)
-    chp_survival_curve = chp.predict_survival_function(X_test)
-    chp_risk_curve = chp.predict_cumulative_hazard_function(X_test)
-    for fn in chp_survival_curve:
-        plt.step(fn.x, fn(fn.x), where="post")
-    plt.title(f"Survival curve for {title}")
-    plt.xlabel("Days")
-    plt.ylim(0, 1)
-    plt.ylabel("% of survival")
-    plt.show()
+    chp_survival_curve = chp.predict_survival_function(X_test, return_array=True)
+    chp_risk_curve = chp.predict_cumulative_hazard_function(X_test, return_array=True)
     
-    for fn in chp_risk_curve:
-        plt.step(fn.x, fn(fn.x), where="post")
-    plt.title(f"Risk curve for {title}")
-    plt.xlabel("Months")
-    plt.ylim(0, 1)
-    plt.ylabel("% of risk")
-    plt.show()
     
+    if draw_plot == True:
+        for fn in chp_survival_curve:
+            plt.step(fn.x, fn(fn.x), where="post")
+        plt.title(f"Survival curve for {title}")
+        plt.xlabel("Days")
+        plt.ylim(0, 1)
+        plt.ylabel("% of survival")
+        plt.show()
+        
+        for fn in chp_risk_curve:
+            plt.step(fn.x, fn(fn.x), where="post")
+        plt.title(f"Risk curve for {title}")
+        plt.xlabel("Months")
+        plt.ylim(0, 1)
+        plt.ylabel("% of risk")
+        plt.show()
+        
     
     return (betas, chp_predict, chp_survival_curve, chp_risk_curve)
 
