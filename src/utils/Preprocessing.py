@@ -86,41 +86,35 @@ class Preprocessor:
         return res
 
 
-
-    def eliminate_zero_genes(self, df: pd.DataFrame, gene_col: str):
-        non_expr_cols = [c for c in [gene_col, "Entrez_Gene_Id"] if c in df.columns]
-        expression = df.drop(columns=non_expr_cols).apply(pd.to_numeric, errors="coerce")
-
-        zeros_per_gene = (expression == 0).sum(axis=1)
-
-        print(zeros_per_gene.describe())
-        print("Max zeros in a gene:", zeros_per_gene.max())
-        print("Min zeros in a gene:", zeros_per_gene.min())
-
-        threshold = expression.shape[1] * 0.8
-        print("Threshold:", threshold)
-
-        keep_genes = zeros_per_gene < threshold
-        df_filtered = df.loc[keep_genes].copy()
-
-        print("Genes before:", df.shape[0])
-        print("Genes after:", df_filtered.shape[0])
-
-        return df_filtered
-    
     def eliminate_nan_genes(self, df: pd.DataFrame, gene_col: str) -> pd.DataFrame:
         non_expr_cols = [c for c in [gene_col, "Entrez_Gene_Id"] if c in df.columns]
-        expression = df.drop(columns=non_expr_cols).apply(pd.to_numeric, errors="coerce")
+        genes = [c for c in df.columns if c not in non_expr_cols]
+        
+        expression = df[genes].apply(pd.to_numeric, errors="coerce")
+        
+        nan_per_gene = expression.isna().sum(axis=0) 
+        keep_genes = nan_per_gene[nan_per_gene < len(df) * 0.8].index 
 
-        nan_per_gene = expression.isna().sum(axis=1)
-        keep_genes = nan_per_gene < expression.shape[1] * 0.8
+        print("Max NaN for gene:", nan_per_gene.max())
+        print("Genes before:", len(genes))
+        print("Genes after:", len(keep_genes))
 
-        df_filtered = df.loc[keep_genes].copy()
+        return pd.concat([df[non_expr_cols], df[keep_genes]], axis=1)
+    def eliminate_zero_genes(self, df: pd.DataFrame, column: str, threshold: float = 0.8) -> pd.DataFrame:
+        genes = [c for c in df.columns if c != column]
+        expression = df[genes]
 
-        print("Max NaN per gene:", nan_per_gene.max())
-        print("Genes before:", df.shape[0])
-        print("Genes after:", df_filtered.shape[0])
+        zeros_per_gene = (expression == 0).sum(axis=0) 
+        max_zeros_allowed = len(df) * threshold          
 
+        print(f"Genes before Treshold: {len(genes)}")
+        print(zeros_per_gene.describe())
+        print(f"Threshold (>{threshold*100:.0f}% zeros): {max_zeros_allowed:.0f} samples")
+
+        keep_genes = zeros_per_gene[zeros_per_gene <= max_zeros_allowed].index
+        df_filtered = pd.concat([df[column], df[keep_genes]], axis=1)
+
+        print(f"After the treshold: {len(keep_genes)}")
         return df_filtered
     
     def clean_columns_dataset(self, df : pd.DataFrame) -> pd.DataFrame:
