@@ -15,6 +15,56 @@ def Cox_regression(X_train : pd.DataFrame,
                               np.ndarray,
                               np.ndarray]:
     
+    
+    betas = dict()
+    
+    chp = CoxPHSurvivalAnalysis()
+    
+    chp.fit(X_train, Y_train)
+
+    betas = pd.DataFrame(
+            chp.coef_,
+            index=X_train.columns,
+            columns=["beta"]
+            )
+    
+    chp_predict = chp.predict(X_test)
+    chp_survival_curve = chp.predict_survival_function(X_test)
+    chp_risk_curve = chp.predict_cumulative_hazard_function(X_test)
+    
+    
+    if draw_plot == True:
+        for fn in chp_survival_curve:
+            plt.step(fn.x, fn(fn.x), where="post") # type: ignore
+        plt.title(f"Survival curve for {title}")
+        plt.xlabel("Days")
+        plt.ylim(0, 1)
+        plt.ylabel("% of survival")
+        plt.show()
+        
+        for fn in chp_risk_curve:
+            plt.step(fn.x, fn(fn.x), where="post") # type: ignore
+        plt.title(f"Risk curve for {title}")
+        plt.xlabel("Months")
+        plt.ylim(0, 1)
+        plt.ylabel("% of risk")
+        plt.show()
+        
+    
+    return (betas, chp_predict, chp_survival_curve, chp_risk_curve)
+
+
+        
+def Cox_l2_regression(X_train : pd.DataFrame,
+                   Y_train : pd.DataFrame,
+                   X_test : pd.DataFrame,
+                   draw_plot : bool,
+                   title: Optional[str] = None,
+                   ) -> Tuple[pd.DataFrame,
+                              np.ndarray,
+                              np.ndarray,
+                              np.ndarray]:
+    
     alphas = 10.0 ** np.linspace(-4,4, 50)
     
     betas = dict()
@@ -38,7 +88,7 @@ def Cox_regression(X_train : pd.DataFrame,
     
     if draw_plot == True:
         for fn in chp_survival_curve:
-            plt.step(fn.x, fn(fn.x), where="post")
+            plt.step(fn.x, fn(fn.x), where="post") # type: ignore
         plt.title(f"Survival curve for {title}")
         plt.xlabel("Days")
         plt.ylim(0, 1)
@@ -46,7 +96,7 @@ def Cox_regression(X_train : pd.DataFrame,
         plt.show()
         
         for fn in chp_risk_curve:
-            plt.step(fn.x, fn(fn.x), where="post")
+            plt.step(fn.x, fn(fn.x), where="post") # type: ignore
         plt.title(f"Risk curve for {title}")
         plt.xlabel("Months")
         plt.ylim(0, 1)
@@ -55,8 +105,7 @@ def Cox_regression(X_train : pd.DataFrame,
         
     
     return (betas, chp_predict, chp_survival_curve, chp_risk_curve)
-
-        
+    
 def p_values_Cox_regression(df: pd.DataFrame, 
                             event_col : str, 
                             duration_col : str) -> pd.DataFrame:
@@ -64,8 +113,6 @@ def p_values_Cox_regression(df: pd.DataFrame,
     pvalue_Cox.fit(df, event_col=event_col, duration_col=duration_col)
     
     return pvalue_Cox.summary
-    
-    
     
 def plot_coefficients(coefs, n_highlight, title:str):
     _, ax = plt.subplots(figsize=(9, 6))
