@@ -223,8 +223,8 @@ class Plots:
         X = X.apply(pd.to_numeric, errors="coerce").fillna(0)
 
 
-        X_log = np.log2(X +1)
-        X_scaled = StandardScaler().fit_transform(X_log)
+        #X_log = np.log2(X +1)
+        X_scaled = StandardScaler().fit_transform(X)
 
         pca = PCA(n_components=4, random_state=0)
         components = pca.fit_transform(X_scaled)
