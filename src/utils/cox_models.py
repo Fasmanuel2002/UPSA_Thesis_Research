@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from typing import Tuple, Any, Optional
 import matplotlib.pyplot as plt
+from lifelines.statistics import logrank_test
 
 def Cox_regression(X_train : pd.DataFrame,
                    Y_train : pd.DataFrame,
@@ -113,6 +114,47 @@ def p_values_Cox_regression(df: pd.DataFrame,
     pvalue_Cox.fit(df, event_col=event_col, duration_col=duration_col)
     
     return pvalue_Cox.summary
+    
+def p_values_log_rank(df_merged : pd.DataFrame) -> Tuple:
+    """
+    Fuction for taking the p-value and log rank test for different types of genes
+    df_merged -> The merged df of mrna-seq and clinical data
+    """
+    df_life_gene = df_merged[["expression", "event", "Overall Survival (Months)"]].copy()
+    
+    df_life_gene["expression"] = pd.to_numeric(df_life_gene["expression"], errors="coerce")
+    
+    df_life_gene["Overall Survival (Months)"] = pd.to_numeric(df_life_gene["Overall Survival (Months)"], errors="coerce")
+    
+    df_life_gene = df_life_gene.dropna(subset=["expression", "event", "Overall Survival (Months)"])
+    
+    df_life_gene["time_60"] = np.minimum(df_life_gene["Overall Survival (Months)"], 60)
+    
+    df_life_gene["event_60"] = df_life_gene["event"].copy()
+    
+    df_life_gene.loc[df_life_gene["Overall Survival (Months)"] > 60, "event_60"] = False
+    
+    df_life_gene = df_life_gene[["expression", "time_60", "event_60"]].copy()
+    
+    p_value = p_values_Cox_regression(
+        df_life_gene,
+        event_col="event_60",
+        duration_col="time_60"
+    )
+    
+    thr = df_merged["expression"].median()
+    low_group = df_merged[df_merged["expression"] < thr]
+    high_group = df_merged[df_merged["expression"] >= thr]
+
+    results = logrank_test(
+            durations_A=low_group["time_60"],
+            durations_B=high_group["time_60"],
+            event_observed_A=low_group["event_60"],
+            event_observed_B=high_group["event_60"]
+        )
+   
+    return (p_value, results)
+    
     
 def plot_coefficients(coefs, n_highlight, title:str):
     _, ax = plt.subplots(figsize=(9, 6))
