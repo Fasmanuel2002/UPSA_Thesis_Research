@@ -3,8 +3,7 @@ from src.dataset.DataSet import SurvivalDataSet
 from torch.utils.data import Subset, DataLoader
 from sklearn.model_selection import train_test_split
 import numpy as np
-def split_data_Train_Val_Test(dataset : SurvivalDataSet, 
-                              batch_size : int = 16) -> Tuple[Subset, Subset, Subset]:
+def split_data_Train_Val_Test(dataset : SurvivalDataSet):
     """
     Split the dataset into three Subset:
     - Training set: 80% of the full dataset
@@ -14,16 +13,9 @@ def split_data_Train_Val_Test(dataset : SurvivalDataSet,
     For SurvivalDataSet
     """
     
-    dataset_size = len(dataset)
-    
-    train_size = int(0.80 * dataset_size)
-
-    val_size = int(0.10 * dataset_size)
-    
-    test_size = dataset_size - train_size - val_size
     
     indices = np.arange(len(dataset))
-    events = dataset.events.numpy()
+    events = dataset.events.cpu().numpy()
     
     train_idx , temp_idx = train_test_split(
         indices,
@@ -37,10 +29,17 @@ def split_data_Train_Val_Test(dataset : SurvivalDataSet,
         stratify=events[temp_idx],
         random_state=42
     )
-    train_data = Subset(dataset, train_idx)
-    validation_data = Subset(dataset, validation_idx)
-    test_data = Subset(dataset, test_idx)
-    return (train_data, validation_data, test_data)
+    
+    X = dataset.X
+    durations = dataset.durations
+    events = dataset.events
+
+    return (
+        (X[train_idx], durations[train_idx], events[train_idx]),
+        (X[validation_idx], durations[validation_idx], events[validation_idx]),
+        (X[test_idx], durations[test_idx], events[test_idx])
+    )
+
 
 def create_dataloaders_train_val_test(train_data : Subset,
                                       val_data: Subset,
