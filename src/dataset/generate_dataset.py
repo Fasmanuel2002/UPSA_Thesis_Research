@@ -4,36 +4,15 @@ from typing import Tuple
 import numpy as np
 import pandas as pd
 from src.utils.Preprocessing import Preprocessor
-from sksurv.util import Surv
 from numpy import ndarray
 from sklearn.preprocessing import StandardScaler
 
-genes_expression = [
-    "TBC1D9",
-    "SUSD3",
-    "SLC39A6",
-    "GFRA1",
-    "SOX11",
-    "GATA3",
-    "SLC15A2",
-    "NANOS1",
-    "ZNF552",
-    "ESR1",
-    "NAT1",
-    "NME3",
-    "DNALI1",
-    "AGR3",
-    "CA12",
-    "BCL2",
-    "MKI67",
-    "TP53",
-    "AURKA"
-]
+
 
 class TorchPreprocessing:
     def __init__(self, df_mrna_clean : pd.DataFrame, df_clinical_data_clean : pd.DataFrame) -> None:
         self.pp = Preprocessor()
-        self.genes_expression = genes_expression
+        self.genes_expression = self.genes_expression = (df_mrna_clean["Hugo_Symbol"].drop_duplicates().sample(500, random_state=42).tolist())
         self.df_mrna_clean = df_mrna_clean
         self.df_clinical_data_clean = df_clinical_data_clean
         
@@ -61,7 +40,7 @@ class TorchPreprocessing:
             right_on="Sample ID",
         )
         
-        cols = ["Sample ID","Tumor-Cancer", "Overall Survival Status", "Overall Survival (Months)"] + self.genes_expression
+        cols = ["Sample ID","Tumor-Cancer", "Overall Survival Status", "Overall Survival (Months)"] + list(self.genes_expression)
         comparation_df = df_merged.loc[
             df_merged["Tumor-Cancer"].isin(["Luminal A", "Luminal B", "TNBC", "HER2-enriched"]),
             cols
@@ -87,7 +66,8 @@ class TorchPreprocessing:
         comparation_df = comparation_df.drop(columns="Sample ID")
 
 
-        X = comparation_df.loc[:, self.genes_expression].astype(float)
+        valid_genes = [g for g in self.genes_expression if g in comparation_df.columns]
+        X = comparation_df.loc[:, valid_genes].astype(float)
         
         X_log = np.log2(X + 1)
         
