@@ -5,6 +5,7 @@ import numpy as np
 from typing import Tuple, Any, Optional
 import matplotlib.pyplot as plt
 from lifelines.statistics import logrank_test
+from sksurv.metrics import concordance_index_censored
 
 def Cox_regression(X_train : pd.DataFrame,
                    Y_train : pd.DataFrame,
@@ -66,7 +67,7 @@ def Cox_l2_regression(X_train : pd.DataFrame,
                               np.ndarray,
                               np.ndarray]:
     
-    alphas = 10.0 ** np.linspace(-4,4, 50)
+    alphas = 10.0 ** np.linspace(-2, 4, 40)
     
     betas = dict()
     
@@ -85,7 +86,6 @@ def Cox_l2_regression(X_train : pd.DataFrame,
     chp_predict = chp.predict(X_test)
     chp_survival_curve = chp.predict_survival_function(X_test, return_array=True)
     chp_risk_curve = chp.predict_cumulative_hazard_function(X_test, return_array=True)
-    
     
     if draw_plot == True:
         for fn in chp_survival_curve:
@@ -155,6 +155,21 @@ def p_values_log_rank(df_merged : pd.DataFrame) -> Tuple:
    
     return (p_value, results)
     
+    
+def C_index(alphas, coefficients, X_train, Y_train):
+    scores = []
+
+    for i in range(len(alphas)):
+        risk = X_train @ coefficients[:, i]
+        c_index = concordance_index_censored(
+            Y_train["event_60"], Y_train["time_60"], risk
+        )[0]
+        scores.append(c_index)
+
+    best_idx = np.argmax(scores)
+    return best_idx, scores[best_idx]
+
+
     
 def plot_coefficients(coefs, n_highlight, title:str):
     _, ax = plt.subplots(figsize=(9, 6))
