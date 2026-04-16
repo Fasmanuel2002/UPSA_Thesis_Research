@@ -10,9 +10,9 @@ from sklearn.preprocessing import StandardScaler
 
 
 class TorchPreprocessing:
-    def __init__(self, df_mrna_clean : pd.DataFrame, df_clinical_data_clean : pd.DataFrame) -> None:
+    def __init__(self, df_mrna_clean : pd.DataFrame, df_clinical_data_clean : pd.DataFrame, number_columns : int) -> None:
         self.pp = Preprocessor()
-        self.genes_expression = self.genes_expression = (df_mrna_clean["Hugo_Symbol"].drop_duplicates().sample(500, random_state=42).tolist())
+        self.genes_expression = self.genes_expression = (df_mrna_clean["Hugo_Symbol"].drop_duplicates().sample(number_columns, random_state=42).tolist())
         self.df_mrna_clean = df_mrna_clean
         self.df_clinical_data_clean = df_clinical_data_clean
         

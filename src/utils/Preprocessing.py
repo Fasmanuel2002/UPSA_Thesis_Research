@@ -158,17 +158,17 @@ class Preprocessor:
         
         
     
-    def initialize_limma(self, df : pd.DataFrame, column : str) -> Tuple[pd.DataFrame, pd.DataFrame, np.ndarray]:
+    def initialize_limma(self, df : pd.DataFrame, column : str , column_event : str, column_status : str) -> Tuple[pd.DataFrame, pd.DataFrame, np.ndarray]:
         
-        metadata = pd.DataFrame(df[column], index=df.index)
+        metadata = pd.DataFrame(df[[column, column_event, column_status]], index=df.index)
         
-        metadata.columns = [column]
+        metadata.columns = [column, column_event, column_status]
         
-        number_data = df.drop(columns=[column])
+        number_data = df.drop(columns=[column, column_event, column_status])
         
         number_data = number_data.apply(pd.to_numeric, errors='coerce')
         
-        number_data = number_data.apply(lambda x : np.log2(x) + 1)
+        number_data = np.log2(number_data + 1)
         
         expr = number_data.T  #(Samples, Genes)
         
@@ -188,7 +188,10 @@ class Preprocessor:
         results = limma.topTable(limma_fit_models, number=np.inf) # type: ignore
         
         #Transform to pandas dataframe
+        
         results_df = pd.DataFrame(results)
+
+        
         if column == "Tumor-Cancer":
             results_df = results_df.rename(columns={
                                 "column0":"HER2-enriched",
