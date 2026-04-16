@@ -166,7 +166,9 @@ class Preprocessor:
         
         number_data = df.drop(columns=[column])
         
-        number_data = np.log2(number_data + 1)
+        number_data = number_data.apply(pd.to_numeric, errors='coerce')
+        
+        number_data = number_data.apply(lambda x : np.log2(x) + 1)
         
         expr = number_data.T  #(Samples, Genes)
         
