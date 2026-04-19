@@ -3,6 +3,7 @@ from sksurv.linear_model import CoxPHSurvivalAnalysis
 import pandas as pd
 import numpy as np
 from typing import Tuple, Any, Optional
+from pandas import Series
 import matplotlib.pyplot as plt
 from lifelines.statistics import logrank_test
 from sksurv.metrics import concordance_index_censored
@@ -156,20 +157,32 @@ def p_values_log_rank(df_merged : pd.DataFrame) -> Tuple:
     return (p_value, results)
     
     
-def C_index(alphas, coefficients, X_train, Y_train):
+def evaluate_model_path(alphas, coefficients, X, Y, time_col="time_60", event_col="event_60"):
     scores = []
-
     for i in range(len(alphas)):
-        risk = X_train @ coefficients[:, i]
-        c_index = concordance_index_censored(
-            Y_train["event_60"], Y_train["time_60"], risk
-        )[0]
+        risk = X @ coefficients[:, i]
+        c_index = concordance_index_censored(Y[event_col], Y[time_col], risk)[0]
         scores.append(c_index)
-
+    
     best_idx = np.argmax(scores)
     return best_idx, scores[best_idx]
 
 
+
+def calculate_multiple_C_index(coef_series : Series, X_train_columns : pd.DataFrame, Y_train : pd.DataFrame) -> Series:
+    individual_c_indexes = {}
+    for gene in X_train_columns.columns:
+        coef_sign = np.sign(coef_series[gene])
+        individual_risk = X_train_columns[gene] * coef_sign
+        
+        c_val = concordance_index_censored(Y_train["event_60"], Y_train["time_60"], individual_risk)[0]
+        
+        individual_c_indexes[gene] = c_val
+
+    c_index_series = pd.Series(individual_c_indexes).sort_values(ascending=False)
+
+    print("C-index individual por cada gen:")
+    return c_index_series
     
 def plot_coefficients(coefs, n_highlight, title:str):
     _, ax = plt.subplots(figsize=(9, 6))
