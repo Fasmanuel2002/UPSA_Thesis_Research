@@ -48,7 +48,7 @@ class TorchPreprocessing:
         return self.pp.eliminate_zero_genes(comparation_df, "Tumor-Cancer", threshold=0.8)
     
     
-    def get_data_set(self) -> Tuple:
+    def get_data_set(self, time_months : int) -> Tuple:
         comparation_df = self.get_comparation_df()
         status = comparation_df["Overall Survival Status"].astype(str).str.strip()
         
@@ -56,9 +56,9 @@ class TorchPreprocessing:
         
         comparation_df["event_60"] = comparation_df["event"].copy()
         
-        comparation_df["time_60"] =  np.minimum(comparation_df["Overall Survival (Months)"], 60)
+        comparation_df["time_60"] =  np.minimum(comparation_df["Overall Survival (Months)"], time_months)
         comparation_df.loc[
-            comparation_df["Overall Survival (Months)"] > 60, "event_60"
+            comparation_df["Overall Survival (Months)"] > time_months, "event_60"
         ] = False
 
         comparation_df = comparation_df.dropna(subset=["time_60"]).copy()
