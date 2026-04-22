@@ -67,13 +67,12 @@ class TorchPreprocessing:
 
 
         valid_genes = [g for g in self.genes_expression if g in comparation_df.columns]
+
         X = comparation_df.loc[:, valid_genes].astype(float)
-        
-        X_log = np.log2(X + 1)
         
         scaler = StandardScaler()
         
-        X_scaled = scaler.fit_transform(X_log)
+        X_scaled = scaler.fit_transform(X)
         
         durations = comparation_df["time_60"].values
         
