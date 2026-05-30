@@ -1,6 +1,4 @@
 import pandas as pd
-from pydeseq2.dds import DeseqDataSet
-from pydeseq2.default_inference import DefaultInference
 from inmoose import limma
 import numpy as np
 from typing import Tuple
@@ -176,7 +174,7 @@ class Preprocessor:
         
         metadata_aligned = metadata.loc[expr.columns].copy() # type: ignore
         
-        design = pd.get_dummies(metadata_aligned[column]).astype(float)
+        design = pd.get_dummies(metadata_aligned[column], drop_first=True).astype(float)
         
         #This is for fitting the models
         limma_fit_models = limma.lmFit(obj=expr, design=design)
@@ -246,22 +244,3 @@ class Preprocessor:
         )
         
         return X, Y_surv, df_gene_merged
-"""
-        
-def initialize_DeseqDataSet(self, counts_data : pd.DataFrame, 
-                        metadata:pd.DataFrame, 
-                        design : str) -> DeseqDataSet:
-        
-        For initializing the DeseqDataSet variable
-        
-        inference = DefaultInference(n_cpus=2)
-        
-        deseqDataSet = DeseqDataSet(
-            counts=counts_data,
-            metadata=metadata,
-            design=f'~{design}',
-            inference=inference
-        )
-        
-        return deseqDataSet
-"""

@@ -1,5 +1,6 @@
 from lifelines import CoxPHFitter
-from sksurv.linear_model import CoxPHSurvivalAnalysis
+from sksurv.linear_model import CoxPHSurvivalAnalysis, CoxnetSurvivalAnalysis
+from sksurv.ensemble import RandomSurvivalForest
 import pandas as pd
 import numpy as np
 from typing import Tuple, Any, Optional
@@ -7,6 +8,9 @@ from pandas import Series
 import matplotlib.pyplot as plt
 from lifelines.statistics import logrank_test
 from sksurv.metrics import concordance_index_censored
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import KFold
+
 
 def Cox_regression(X_train : pd.DataFrame,
                    Y_train : pd.DataFrame,
@@ -19,10 +23,8 @@ def Cox_regression(X_train : pd.DataFrame,
                               np.ndarray]:
     
     
-    betas = dict()
-    
     chp = CoxPHSurvivalAnalysis()
-    
+
     chp.fit(X_train, Y_train)
 
     betas = pd.DataFrame(
@@ -36,7 +38,7 @@ def Cox_regression(X_train : pd.DataFrame,
     chp_risk_curve = chp.predict_cumulative_hazard_function(X_test)
     
     
-    if draw_plot == True:
+    if draw_plot:
         for fn in chp_survival_curve:
             plt.step(fn.x, fn(fn.x), where="post") # type: ignore
         plt.title(f"Survival curve for {title}")
@@ -68,6 +70,15 @@ def Cox_l2_regression(X_train : pd.DataFrame,
                               np.ndarray,
                               np.ndarray]:
     
+    scaler = StandardScaler()
+    X_train = pd.DataFrame(
+        scaler.fit_transform(X_train),
+        index=X_train.index, columns=X_train.columns
+    )
+    X_test = pd.DataFrame(
+        scaler.transform(X_test),   # ¡transform, NO fit_transform!
+        index=X_test.index, columns=X_test.columns
+    )
     alphas = 10.0 ** np.linspace(-2, 4, 40)
     
     betas = dict()
@@ -85,10 +96,10 @@ def Cox_l2_regression(X_train : pd.DataFrame,
              .set_index(X_train.columns))
     
     chp_predict = chp.predict(X_test)
-    chp_survival_curve = chp.predict_survival_function(X_test, return_array=True)
-    chp_risk_curve = chp.predict_cumulative_hazard_function(X_test, return_array=True)
+    chp_survival_curve = chp.predict_survival_function(X_test)
+    chp_risk_curve = chp.predict_cumulative_hazard_function(X_test)
     
-    if draw_plot == True:
+    if draw_plot:
         for fn in chp_survival_curve:
             plt.step(fn.x, fn(fn.x), where="post") # type: ignore
         plt.title(f"Survival curve for {title}")
@@ -167,6 +178,85 @@ def evaluate_model_path(alphas, coefficients, X, Y, time_col="time_60", event_co
     best_idx = np.argmax(scores)
     return best_idx, scores[best_idx]
 
+
+def select_coxnet_alpha_cv(model, X_train, Y_train, n_splits=5, random_state=42,
+                           time_col="time_60", event_col="event_60"):
+    """Pick the Coxnet penalty alpha by k-fold CV on the training set only.
+
+    Avoids the optimistic bias of choosing alpha on the test set: for every alpha
+    on the fitted model's path we average the validation C-index across folds and
+    return the alpha with the highest mean CV C-index.
+    """
+    alphas = model.alphas_
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+    score_sum = np.zeros(len(alphas))
+    score_cnt = np.zeros(len(alphas))
+    for tr, va in kf.split(X_train):
+        fold_model = CoxnetSurvivalAnalysis(
+            l1_ratio=model.l1_ratio, alpha_min_ratio=model.alpha_min_ratio, alphas=alphas
+        )
+        try:
+            fold_model.fit(X_train.iloc[tr], Y_train[tr])
+        except Exception:
+            continue
+        for j, a in enumerate(alphas):
+            try:
+                risk = fold_model.predict(X_train.iloc[va], alpha=a)
+                c = concordance_index_censored(
+                    Y_train[event_col][va], Y_train[time_col][va], risk
+                )[0]
+                score_sum[j] += c
+                score_cnt[j] += 1
+            except Exception:
+                continue
+    mean_scores = np.divide(score_sum, score_cnt, out=np.zeros_like(score_sum),
+                            where=score_cnt > 0)
+    best_j = int(np.argmax(mean_scores))
+    return alphas[best_j], mean_scores[best_j]
+
+
+def select_rsf_params_cv(X_train, Y_train, grid, n_splits=5, random_state=42):
+    """Pick RandomSurvivalForest hyper-parameters by k-fold CV on the training set.
+
+    Selecting on the held-out test set (as the original grid search did) inflates
+    the reported C-index; this scores every grid point by mean cross-validated
+    C-index on the training split instead.
+    """
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+    best_score = -1
+    best_params = None
+    results = []
+    for n_estimators, min_samples_split, min_samples_leaf in grid:
+        fold_scores = []
+        for tr, va in kf.split(X_train):
+            try:
+                m = RandomSurvivalForest(
+                    n_estimators=n_estimators,
+                    min_samples_split=min_samples_split,
+                    min_samples_leaf=min_samples_leaf,
+                    random_state=random_state,
+                )
+                m.fit(X_train.iloc[tr], Y_train[tr])
+                fold_scores.append(m.score(X_train.iloc[va], Y_train[va]))
+            except Exception:
+                continue
+        if not fold_scores:
+            continue
+        score = float(np.mean(fold_scores))
+        results.append({
+            "n_estimators": n_estimators,
+            "min_samples_split": min_samples_split,
+            "min_samples_leaf": min_samples_leaf,
+            "c_index": score,
+        })
+        if score > best_score:
+            best_score = score
+            best_params = {
+                "n_estimators": n_estimators,
+                "min_samples_split": min_samples_split,
+                "min_samples_leaf": min_samples_leaf,
+            }
+    return best_params, best_score, results
 
 
 def calculate_multiple_C_index(coef_series : Series, X_train_columns : pd.DataFrame, Y_train : pd.DataFrame) -> Series:

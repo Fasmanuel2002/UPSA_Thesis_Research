@@ -12,8 +12,6 @@ from sksurv.util import Surv
 from sksurv.compare import compare_survival
 from lifelines import KaplanMeierFitter
 from lifelines.plotting import add_at_risk_counts
-import matplotlib.pyplot as plt
-import numpy as np
 
 from src.utils.Preprocessing import Preprocessor
 class Plots:
@@ -351,4 +349,4 @@ class Plots:
         chisq, pvalue = compare_survival(y, df["group"].to_numpy())
         print(f"Log-rank: chi2={chisq:.3f}, p={pvalue:.4g}")
 
-        return df 
+        return chisq, pvalue
