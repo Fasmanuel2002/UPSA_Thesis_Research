@@ -76,7 +76,7 @@ def Cox_l2_regression(X_train : pd.DataFrame,
         index=X_train.index, columns=X_train.columns
     )
     X_test = pd.DataFrame(
-        scaler.transform(X_test),   # ¡transform, NO fit_transform!
+        scaler.transform(X_test),   
         index=X_test.index, columns=X_test.columns
     )
     alphas = 10.0 ** np.linspace(-2, 4, 40)

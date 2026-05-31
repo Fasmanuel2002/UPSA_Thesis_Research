@@ -47,7 +47,7 @@ class TorchPreprocessing:
 
         return self.pp.eliminate_zero_genes(comparation_df,"Tumor-Cancer",threshold=0.8)
 
-    def get_data_set(self, time_months: int) -> Tuple:
+    def get_data_set(self, time_months: int, return_ids: bool = False) -> Tuple:
         comparation_df = self.get_comparation_df().copy()
 
         status = comparation_df["Overall Survival Status"].astype(str).str.strip()
@@ -65,6 +65,7 @@ class TorchPreprocessing:
         ] = False
 
         comparation_df = comparation_df.dropna(subset=["time_60"]).copy()
+        sample_ids = comparation_df["Sample ID"].to_numpy()
         comparation_df = comparation_df.drop(columns=["Sample ID"])
 
         valid_genes = [g for g in self.genes_expression if g in comparation_df.columns]
@@ -76,4 +77,6 @@ class TorchPreprocessing:
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
 
+        if return_ids:
+            return X_scaled, durations, events, scaler, sample_ids
         return X_scaled, durations, events, scaler
