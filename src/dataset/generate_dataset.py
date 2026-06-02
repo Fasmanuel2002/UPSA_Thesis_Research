@@ -47,7 +47,25 @@ class TorchPreprocessing:
 
         return self.pp.eliminate_zero_genes(comparation_df,"Tumor-Cancer",threshold=0.8)
 
-    def get_data_set(self, time_months: int, return_ids: bool = False) -> Tuple:
+    def get_data_set(self, time_months: int, return_ids: bool = False,
+                     apply_scaler: bool = True) -> Tuple:
+        """Build the (X, durations, events, scaler[, ids]) tuple for modelling.
+
+        ``apply_scaler`` (default True for backward compatibility) fits a
+        StandardScaler on the FULL dataset and returns the transformed X.
+        That introduces test-set leakage because val/test contribute to the
+        feature means and SDs used at train time. The methodologically
+        correct usage is ``apply_scaler=False``: this returns the raw X
+        (and an UNFITTED StandardScaler) so the caller can split first and
+        then fit the scaler on the training fold only:
+
+            X, durs, evs, scaler, ids = tp.get_data_set(60, return_ids=True,
+                                                         apply_scaler=False)
+            # split by IDs ...
+            X_train = scaler.fit_transform(X[train_mask])
+            X_val   = scaler.transform(X[val_mask])
+            X_test  = scaler.transform(X[test_mask])
+        """
         comparation_df = self.get_comparation_df().copy()
 
         status = comparation_df["Overall Survival Status"].astype(str).str.strip()
@@ -75,8 +93,11 @@ class TorchPreprocessing:
         events = comparation_df["event_60"].astype(float).to_numpy()
 
         scaler = StandardScaler()
-        X_scaled = scaler.fit_transform(X)
+        if apply_scaler:
+            X_out = scaler.fit_transform(X)
+        else:
+            X_out = X.to_numpy(dtype=float)  # caller must fit scaler on train fold
 
         if return_ids:
-            return X_scaled, durations, events, scaler, sample_ids
-        return X_scaled, durations, events, scaler
+            return X_out, durations, events, scaler, sample_ids
+        return X_out, durations, events, scaler

@@ -61,44 +61,62 @@ def Cox_regression(X_train : pd.DataFrame,
 
         
 def Cox_l2_regression(X_train : pd.DataFrame,
-                   Y_train : pd.DataFrame,
+                   Y_train,
                    X_test : pd.DataFrame,
                    draw_plot : bool,
                    title: Optional[str] = None,
+                   alpha: Optional[float] = None,
                    ) -> Tuple[pd.DataFrame,
                               np.ndarray,
                               np.ndarray,
                               np.ndarray]:
-    
+    """Ridge-penalized Cox regression with explicit alpha selection.
+
+    The fitted CoxPH coefficients are returned for the full 40-point path
+    (10**-2 to 10**4) so the coefficient-shrinkage plot still works.
+
+    For prediction, the previous implementation predicted with the LAST alpha
+    of the loop (=10000, maximally penalised), which gave a virtually-null
+    model. Now:
+      - if `alpha` is provided, a fresh model is fitted at that alpha and used.
+      - if `alpha` is None, the median alpha of the path (≈10) is used as a
+        safe default. For a real CV-selected alpha, run the path separately
+        and pass the chosen value back in via `alpha=...`.
+    """
     scaler = StandardScaler()
-    X_train = pd.DataFrame(
+    X_train_s = pd.DataFrame(
         scaler.fit_transform(X_train),
         index=X_train.index, columns=X_train.columns
     )
-    X_test = pd.DataFrame(
-        scaler.transform(X_test),   
+    X_test_s = pd.DataFrame(
+        scaler.transform(X_test),
         index=X_test.index, columns=X_test.columns
     )
     alphas = 10.0 ** np.linspace(-2, 4, 40)
-    
+
     betas = dict()
-    
-    chp = CoxPHSurvivalAnalysis()
-    
-    for alpha in alphas:
-        chp.set_params(alpha=alpha)
-        chp.fit(X_train, Y_train)
-        key = round(alpha, 5)
-        betas[key] = chp.coef_
-    
-    betas = (pd.DataFrame.from_dict(betas)
+    for a in alphas:
+        try:
+            chp = CoxPHSurvivalAnalysis(alpha=a)
+            chp.fit(X_train_s, Y_train)
+            betas[round(a, 5)] = chp.coef_
+        except Exception:
+            betas[round(a, 5)] = np.full(X_train.shape[1], np.nan)
+
+    betas_df = (pd.DataFrame.from_dict(betas)
              .rename_axis(index="feature", columns="alpha")
              .set_index(X_train.columns))
-    
-    chp_predict = chp.predict(X_test)
-    chp_survival_curve = chp.predict_survival_function(X_test)
-    chp_risk_curve = chp.predict_cumulative_hazard_function(X_test)
-    
+
+    if alpha is None:
+        alpha = float(alphas[len(alphas) // 2])
+        print(f"Cox_l2_regression: no alpha supplied, defaulting to median of path = {alpha:.4g}")
+
+    chp_final = CoxPHSurvivalAnalysis(alpha=alpha)
+    chp_final.fit(X_train_s, Y_train)
+    chp_predict = chp_final.predict(X_test_s)
+    chp_survival_curve = chp_final.predict_survival_function(X_test_s)
+    chp_risk_curve = chp_final.predict_cumulative_hazard_function(X_test_s)
+
     if draw_plot:
         for fn in chp_survival_curve:
             plt.step(fn.x, fn(fn.x), where="post") # type: ignore
@@ -107,7 +125,7 @@ def Cox_l2_regression(X_train : pd.DataFrame,
         plt.ylim(0, 1)
         plt.ylabel("% of survival")
         plt.show()
-        
+
         for fn in chp_risk_curve:
             plt.step(fn.x, fn(fn.x), where="post") # type: ignore
         plt.title(f"Risk curve for {title}")
@@ -115,9 +133,9 @@ def Cox_l2_regression(X_train : pd.DataFrame,
         plt.ylim(0, 1)
         plt.ylabel("% of risk")
         plt.show()
-        
-    
-    return (betas, chp_predict, chp_survival_curve, chp_risk_curve)
+
+
+    return (betas_df, chp_predict, chp_survival_curve, chp_risk_curve)
     
 def p_values_Cox_regression(df: pd.DataFrame, 
                             event_col : str, 
@@ -168,17 +186,6 @@ def p_values_log_rank(df_merged : pd.DataFrame) -> Tuple:
     return (p_value, results)
     
     
-def evaluate_model_path(alphas, coefficients, X, Y, time_col="time_60", event_col="event_60"):
-    scores = []
-    for i in range(len(alphas)):
-        risk = X @ coefficients[:, i]
-        c_index = concordance_index_censored(Y[event_col], Y[time_col], risk)[0]
-        scores.append(c_index)
-    
-    best_idx = np.argmax(scores)
-    return best_idx, scores[best_idx]
-
-
 def select_coxnet_alpha_cv(model, X_train, Y_train, n_splits=5, random_state=42,
                            time_col="time_60", event_col="event_60"):
     """Pick the Coxnet penalty alpha by k-fold CV on the training set only.

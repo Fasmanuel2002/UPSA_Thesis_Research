@@ -1,44 +1,7 @@
 from typing import Tuple
 from src.dataset.DataSet import SurvivalDataSet
 from torch.utils.data import Subset, DataLoader
-from sklearn.model_selection import train_test_split
 import numpy as np
-def split_data_Train_Val_Test(dataset : SurvivalDataSet):
-    """
-    Split the dataset into three Subset:
-    - Training set: 64% of the full dataset
-    - Validation set: 16% of the full dataset
-    - Test set: 20% of the full dataset
-    
-    For SurvivalDataSet
-    """
-    
-    
-    indices = np.arange(len(dataset))
-    events = dataset.events.cpu().numpy()
-    
-    train_idx , temp_idx = train_test_split(
-        indices,
-        test_size=188,
-        stratify=events,
-        random_state=42
-    )
-    validation_idx, test_idx = train_test_split(
-        temp_idx,
-        test_size=104,
-        stratify=events[temp_idx],
-        random_state=42
-    )
-    
-    X = dataset.X
-    durations = dataset.durations
-    events = dataset.events
-
-    return (
-        (X[train_idx], durations[train_idx], events[train_idx]),
-        (X[validation_idx], durations[validation_idx], events[validation_idx]),
-        (X[test_idx], durations[test_idx], events[test_idx])
-    )
 
 
 def split_dataset_by_ids(dataset : SurvivalDataSet, sample_ids, train_ids, val_ids, test_ids):

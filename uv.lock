@@ -439,6 +439,26 @@ wheels = [
 ]
 
 [[package]]
+name = "gseapy"
+version = "1.2.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "matplotlib" },
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "requests" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f5/32/a5307b9dda181c0f3dfbae435fa6aa0d6b66174ce2cd7a4bc81d8a006007/gseapy-1.2.1.tar.gz", hash = "sha256:f5292ddd4dd9c66ad4f4e5fa2acceeaaf39341b0a508bcbe62617c449f1e8869", size = 148112, upload-time = "2026-04-27T17:02:29.4Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fd/b0/e7ba2951607084795ddbfa0dcc70d388d56bf08c5b72a7649bc07cd16f3b/gseapy-1.2.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:b79b047e84ca41152b8d8a9c5eb2c0447f4ca2bde88672f098abea2ebb1d617f", size = 564196, upload-time = "2026-04-27T17:06:34.131Z" },
+    { url = "https://files.pythonhosted.org/packages/30/7e/296c3366d7b5956d58b58b8658054e0cb4f3296f85df8b016dbedc735346/gseapy-1.2.1-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:029ab88bf6ec7da0bb2e8b0af93aefd17683f4d2bebbb4c0c3cd3ca18f3c1c33", size = 616161, upload-time = "2026-04-27T17:42:34.595Z" },
+    { url = "https://files.pythonhosted.org/packages/24/67/c6e4aab1162bf6fa4fb38986651793e4f30d96df2a68798d1e8441d7cb4c/gseapy-1.2.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:b22ae7c8a508b24a6e85fc47d8afb91e625a72052c8e70d63e4c9f5b5f61fa0b", size = 637414, upload-time = "2026-04-27T01:01:19.27Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/d8/b430cb81a41d7cce0bb751ae1a570752f870d2b1c44753de65bf1a168f25/gseapy-1.2.1-cp311-cp311-win32.whl", hash = "sha256:000afe3a6f22326043a815b33d64b8b290967b3e1ddac4e471b5cc7ba45c5660", size = 437135, upload-time = "2026-04-27T18:35:53.725Z" },
+    { url = "https://files.pythonhosted.org/packages/f5/ce/e9026864d931e4d8e4f79e30a5ddf674253d3b86fed8971b70aef67463ec/gseapy-1.2.1-cp311-cp311-win_amd64.whl", hash = "sha256:0cad101e63e3862c0f05d1f221a0ee04401b1ddfb207c3a354e8dd0b27a5a743", size = 456533, upload-time = "2026-04-27T18:35:54.984Z" },
+]
+
+[[package]]
 name = "h5py"
 version = "3.16.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1499,6 +1519,7 @@ name = "upsa-thesis-research"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "gseapy" },
     { name = "inmoose" },
     { name = "lifelines" },
     { name = "numpy" },
@@ -1513,6 +1534,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "gseapy", specifier = ">=1.2.1" },
     { name = "inmoose", specifier = ">=0.9.1" },
     { name = "lifelines", specifier = ">=0.30.3" },
     { name = "numpy", specifier = "==1.26.4" },

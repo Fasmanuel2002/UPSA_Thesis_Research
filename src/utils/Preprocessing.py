@@ -84,20 +84,6 @@ class Preprocessor:
         return res
 
 
-    def eliminate_nan_genes(self, df: pd.DataFrame, gene_col: str) -> pd.DataFrame:
-        non_expr_cols = [c for c in [gene_col, "Entrez_Gene_Id"] if c in df.columns]
-        genes = [c for c in df.columns if c not in non_expr_cols]
-        
-        expression = df[genes].apply(pd.to_numeric, errors="coerce")
-        
-        nan_per_gene = expression.isna().sum(axis=0) 
-        keep_genes = nan_per_gene[nan_per_gene < len(df) * 0.8].index 
-
-        print("Max NaN for gene:", nan_per_gene.max())
-        print("Genes before:", len(genes))
-        print("Genes after:", len(keep_genes))
-
-        return pd.concat([df[non_expr_cols], df[keep_genes]], axis=1)
     def eliminate_zero_genes(self, df: pd.DataFrame, column: str, threshold: float = 0.8) -> pd.DataFrame:
         genes = [c for c in df.columns if c != column]
         expression = df[genes]
@@ -143,15 +129,18 @@ class Preprocessor:
     
     def merge_datasets(self, df_clinical_data : pd.DataFrame ,
                        df_mRNA : pd.DataFrame) -> pd.DataFrame:
-        
-        df_mRNA = df_mRNA.drop(columns=["Hugo_Symbol", "Entrez_Gene_Id"], axis=0)
-        
-        df_mRNA = df_mRNA.T.reset_index()
-        
-        df_mRNA = df_mRNA.rename(columns={"index":"Sample ID"})
-        
-        df_merged = pd.merge(df_mRNA, df_clinical_data, right_on="Sample ID", left_on="Sample ID")
-        
+        # Set Hugo_Symbol as index BEFORE transposing so gene symbols become
+        # the column names after .T. The previous implementation dropped
+        # Hugo_Symbol first and then transposed, producing integer column
+        # names (0, 1, 2, ...) and silently losing the gene identity.
+        df_mRNA = df_mRNA.set_index("Hugo_Symbol")
+        if "Entrez_Gene_Id" in df_mRNA.columns:
+            df_mRNA = df_mRNA.drop(columns=["Entrez_Gene_Id"])
+
+        df_mRNA = df_mRNA.T.reset_index().rename(columns={"index": "Sample ID"})
+
+        df_merged = pd.merge(df_mRNA, df_clinical_data, on="Sample ID")
+
         return df_merged
         
         
