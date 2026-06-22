@@ -52,7 +52,7 @@ def k_m_cox(list_risk : list, durations : Tensor, events : Tensor):
     return chisq, pvalue
 
 
-def k_m_surv(risk : ndarray, Y_test) -> Tuple:
+def k_m_surv(risk : ndarray, Y_test, model_name : str) -> Tuple:
     df = pd.DataFrame()
     thr = np.median(risk)
 
@@ -80,7 +80,7 @@ def k_m_surv(risk : ndarray, Y_test) -> Tuple:
         plt.fill_between(time, conf_int[0], conf_int[1], alpha=0.25, step="post")
     plt.xlabel("Months")
     plt.ylabel("Survival probability")
-    plt.title(f"Kaplan–Meier por (mediana)")
+    plt.title(f"Kaplan–Meier of {model_name} with the median")
     plt.legend()
     plt.show()
     
