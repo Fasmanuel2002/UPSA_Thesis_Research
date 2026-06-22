@@ -8,7 +8,7 @@ from sksurv.compare import compare_survival
 from numpy import ndarray
 from typing import Tuple
 
-def k_m_cox(list_risk : list, durations : Tensor, events : Tensor):
+def k_m_cox(list_risk : list, durations : Tensor, events : Tensor, model_name : str):
     df = pd.DataFrame()
 
     thr = np.median(list_risk)
@@ -36,7 +36,7 @@ def k_m_cox(list_risk : list, durations : Tensor, events : Tensor):
             plt.fill_between(time, conf_int[0], conf_int[1], alpha=0.25, step="post")
     plt.xlabel("Months")
     plt.ylabel("Survival probability")
-    plt.title(f"Kaplan–Meier por (mediana)")
+    plt.title(f"Kaplan–Meier of {model_name} with the median")
     plt.legend()
     plt.show()
     
