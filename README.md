@@ -49,28 +49,3 @@ You need to visit the following website to download the dataset:
 Download the `Breast Invasive Carcinoma (TCGA, Cell 2015)` tar, which contains the dataset and put it on `data/`.
 
 ## Running the Project
-
-- `Otto_TRACE/dataset/`  
-  Contains the dataset processing pipeline based on the OTTO dataset. This class loads data from `train.jsonl`, constructs the model inputs, generates task-specific logits, and performs the input–target split used for training and evaluation.
-  
-- `Otto_TRACE/model/`
-  
-  This section presents the re-implementation of the TRACE model architecture, as described in Section 2.3 (Model Architecture) of the original TRACE paper, adapted for this research investigation
-  
-- `Otto_TRACE/training_models/`
-  
-  Contains the two versions of training pipeline for Single-Task Learning (STL) and Multi-Task Learning (MLT), the purpose of this code format is for jupyterhub GPU.
-
-- `Otto_TRACE/test_models/`
-  
-  Contains the two versions of Testing Pipeline for Single-Task Learning (STL) and Multi-Task Learning (MLT).
-
-- `Otto_TRACE/utils/`
-  
-  Contains six files for corresponding reasons
-  - EarlyStopping: Stop training when a monitored metric F1 has stopped improving
-  - feature_engineering: This file presents the re-implementation of the TRACE feature engineering, as described in Section 2.2 (Feature and Position Encoding) of the original TRACE paper
-  - normalization: This file presents the re-implementation of TRACE for normalizating and log the time elapsed and time betwen from Section 2.2 (Feature and Position Encoding) of the original TRACE paper
-  - plot_confussion_matrix: Script for Computing and Plotting the Confusion Matrix
-  - SplitData: Script for splitting the dataset into training, validation, and test sets.
-  - training_utils: Utility scripts designed to improve code readability, modularity, and maintainability.
